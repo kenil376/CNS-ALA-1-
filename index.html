@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CryptoCipher — Secure Messaging</title>
+<meta name="description" content="Secure messaging demonstration using AES-256-GCM and RSA-OAEP hybrid encryption.">
+<style>
+:root{
+  --bg:#05060b;--bg2:#080a12;--panel:rgba(13,16,27,.78);--panel2:#101526;
+  --line:rgba(255,255,255,.09);--text:#f7f8ff;--muted:#8d96ad;
+  --violet:#00C896;--indigo:#00B4D8;--cyan:#00B4D8;--green:#00C896;--red:#fb7185;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:'Segoe UI',Arial,sans-serif;
+background:radial-gradient(circle at 12% 12%,rgba(0,200,150,.28),transparent 30%),
+radial-gradient(circle at 88% 18%,rgba(0,180,216,.28),transparent 31%),
+linear-gradient(135deg,#021614 0%,#032c2b 35%,#063c50 65%,#041b2c 100%);
+color:var(--text)}
+body{overflow-x:hidden}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;
+background:radial-gradient(circle at 20% 50%,rgba(0,200,150,.13),transparent 28%),
+radial-gradient(circle at 80% 50%,rgba(0,180,216,.13),transparent 30%)}
+body:after{
+  content:"";position:fixed;inset:0;pointer-events:none;opacity:.2;
+  background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:38px 38px;
+  mask-image:linear-gradient(to bottom,black,transparent 85%);
+}
+button,textarea{font:inherit}
+button{cursor:pointer}
+.topbar{
+  height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 34px;
+  border-bottom:1px solid var(--line);background:rgba(5,6,11,.72);backdrop-filter:blur(20px);
+  position:fixed;top:0;left:0;right:0;z-index:100;
+}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{
+  width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-weight:900;
+  background:linear-gradient(135deg,#00C896,#00B4D8);box-shadow:0 0 28px rgba(124,92,246,.4);
+  animation:logoFloat 3s ease-in-out infinite;
+}
+.brand-title{font-weight:850;font-size:16px}.brand-title span{color:#bfdbfe}.brand-sub{font-size:8px;color:#667087;letter-spacing:2px;margin-top:2px}
+.live{font:11px ui-monospace,monospace;color:#8490a7;display:flex;gap:8px;align-items:center}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 14px var(--green);animation:blink 1.5s infinite}
+
+.landing{
+  min-height:100vh;display:grid;place-items:center;padding:110px 7vw 50px;position:relative;
+  transition:opacity .5s,transform .6s;
+}
+.landing.hidden{display:none}
+.hero-wrap{width:min(1200px,100%);display:grid;grid-template-columns:1.08fr .92fr;gap:60px;align-items:center}
+.eyebrow{display:inline-flex;padding:8px 12px;border:1px solid rgba(0,200,150,.35);border-radius:999px;color:#b9a4ff;font:11px ui-monospace,monospace;background:rgba(139,92,246,.07)}
+h1{font-size:clamp(50px,7vw,88px);line-height:.92;letter-spacing:-5px;margin:22px 0}
+.gradient{background:linear-gradient(100deg,#ffffff,#8fffe4 48%,#67e8f9);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero-copy{max-width:690px;color:#8b96ad;line-height:1.8;font-size:15px}
+.hero-actions{display:flex;gap:12px;margin-top:28px}
+.primary,.secondary{
+  border:0;border-radius:12px;padding:14px 20px;font-weight:850;color:white;position:relative;overflow:hidden;transition:.25s;
+}
+.primary{background:linear-gradient(120deg,#00C896,#00B4D8,#67e8f9);background-size:200% 200%;box-shadow:0 15px 45px rgba(99,102,241,.28);animation:gradientMove 5s ease infinite}
+.secondary{background:#0c101a;border:1px solid var(--line)}
+.primary:hover,.secondary:hover{transform:translateY(-3px) scale(1.01)}
+.primary:after,.secondary:after,.action:after,.small:after{
+  content:"";position:absolute;top:-80%;left:-80%;width:45%;height:260%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);
+  transform:rotate(25deg);transition:.7s
+}
+.primary:hover:after,.secondary:hover:after,.action:hover:after,.small:hover:after{left:140%}
+
+.hero-visual{height:450px;position:relative;display:grid;place-items:center}
+.energy{
+  width:250px;height:250px;border-radius:50%;position:relative;display:grid;place-items:center;
+  background:radial-gradient(circle,#1b1735 0 18%,#0d1020 42%,transparent 68%);
+  box-shadow:0 0 100px rgba(124,58,237,.22);
+}
+.energy:before,.energy:after{content:"";position:absolute;border-radius:50%;border:1px solid rgba(0,180,216,.3);inset:-45px;animation:ring 8s linear infinite}
+.energy:after{inset:-90px;border-color:rgba(96,165,250,.17);animation-direction:reverse;animation-duration:11s}
+.shield{width:115px;height:135px;clip-path:polygon(50% 0,90% 15%,84% 70%,50% 100%,16% 70%,10% 15%);background:linear-gradient(145deg,#00C896,#00B4D8);display:grid;place-items:center;font-size:48px;filter:drop-shadow(0 0 28px rgba(99,102,241,.5));animation:shieldPulse 3s infinite}
+.node{position:absolute;width:62px;height:62px;border-radius:18px;border:1px solid var(--line);background:#0d1320;display:grid;place-items:center;font:11px ui-monospace,monospace;color:#b8c2d8;box-shadow:0 12px 35px #0008;animation:nodeFloat 4s ease-in-out infinite}
+.n1{top:9%;right:15%;color:#bfdbfe}.n2{bottom:8%;left:8%;color:#34d399;animation-delay:1s}.n3{bottom:18%;right:3%;color:#dbeafe;animation-delay:1.7s}
+
+.features{display:none}
+
+.app{
+  min-height:100vh;padding:96px 34px 45px;display:none;position:relative;
+}
+.app.active{display:block;animation:appIn .65s cubic-bezier(.2,.8,.2,1)}
+.app-head{max-width:1320px;margin:0 auto 20px;display:flex;align-items:center;justify-content:space-between}
+.back{
+  border:1px solid var(--line);background:#0b0f18;color:#aab5c9;border-radius:10px;padding:10px 13px;transition:.25s
+}
+.back:hover{color:#fff;border-color:rgba(139,92,246,.5);transform:translateX(-3px)}
+.app-title{text-align:center;position:absolute;left:50%;transform:translateX(-50%)}
+.app-title .mini{font:9px ui-monospace,monospace;color:#93c5fd;letter-spacing:3px}
+.app-title h2{margin:5px 0 0;font-size:31px;letter-spacing:-1px}
+.key-state{font:11px ui-monospace,monospace;color:#79e8bb;display:flex;align-items:center;gap:7px}
+
+.shell{
+  max-width:1320px;margin:0 auto;display:grid;grid-template-columns:185px 1fr;gap:18px;
+}
+.sidebar{
+  border:1px solid var(--line);background:rgba(10,14,23,.72);border-radius:18px;padding:12px;height:max-content;position:sticky;top:95px;
+}
+.side-title{font:9px ui-monospace,monospace;color:#5e6a80;letter-spacing:2px;padding:8px 10px 14px}
+.navbtn{
+  width:100%;border:0;background:transparent;color:#748098;text-align:left;border-radius:10px;padding:12px 11px;margin:3px 0;font-size:12px;font-weight:750;transition:.25s
+}
+.navbtn:hover{background:#111726;color:#fff}.navbtn.active{background:linear-gradient(100deg,#21163f,#151a34);color:#fff;box-shadow:inset 2px 0 #8b5cf6}
+.side-security{margin-top:15px;padding:12px;border:1px solid rgba(52,211,153,.14);border-radius:12px;background:rgba(52,211,153,.035);font-size:10px;color:#6f7e96;line-height:1.6}
+.side-security b{color:#55dfac;display:block;margin-bottom:3px}
+
+.workspace-panel{display:none}
+.workspace-panel.active{display:block;animation:panelIn .45s ease}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.panel{
+  background:linear-gradient(145deg,rgba(15,20,33,.88),rgba(8,12,20,.9));
+  border:1px solid var(--line);border-radius:18px;padding:23px;box-shadow:0 20px 60px rgba(0,0,0,.22);
+}
+.panel.full{grid-column:1/-1}
+.panel-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.panel-title h3{margin:0;font-size:18px}.num{font:9px ui-monospace,monospace;color:#93c5fd;margin-right:8px}
+.badge{font:9px ui-monospace,monospace;color:#55dfac;border:1px solid rgba(52,211,153,.22);padding:6px 8px;border-radius:7px;background:rgba(52,211,153,.03)}
+label{display:block;font-size:12px;color:#aeb8ca;margin:14px 0 7px}
+textarea{
+  width:100%;min-height:150px;background:#060a11;color:#e8ecf7;border:1px solid rgba(148,163,184,.12);border-radius:11px;
+  padding:13px;outline:0;resize:vertical;font:12px ui-monospace,monospace;line-height:1.65;transition:.25s
+}
+textarea:focus{border-color:#7659e8;box-shadow:0 0 0 3px rgba(124,58,237,.08)}
+.input-short{min-height:72px}
+.char{text-align:right;font-size:11px;color:#66738a;margin-top:5px}
+.action{
+  width:100%;border:0;border-radius:11px;padding:14px;color:#fff;font-weight:900;position:relative;overflow:hidden;
+  background:linear-gradient(110deg,#00C896,#00B4D8,#67e8f9);background-size:200% 200%;animation:gradientMove 5s ease infinite;
+  box-shadow:0 12px 32px rgba(99,102,241,.2);transition:.25s
+}
+.action:hover{transform:translateY(-3px);box-shadow:0 18px 40px rgba(99,102,241,.3)}
+.action.success{background:linear-gradient(110deg,#059669,#0ea5e9)}
+.action:disabled{opacity:.75;cursor:wait}
+.output{background:#060a11;border:1px solid rgba(148,163,184,.1);border-radius:10px;padding:12px;min-height:67px;color:#8f9cb1;font:11px ui-monospace,monospace;word-break:break-all;white-space:pre-wrap}
+.row{display:flex;gap:8px;margin-top:7px}
+.small{position:relative;overflow:hidden;flex:1;border:1px solid var(--line);background:#0b111c;color:#8794aa;border-radius:8px;padding:8px;font-size:10px;transition:.2s}
+.small:hover{color:#fff;border-color:#6f59d9;transform:translateY(-2px)}
+.clear:hover{color:#ff91a5;border-color:rgba(251,113,133,.35)}
+.status{height:18px;text-align:center;font:11px ui-monospace,monospace;color:#66738a;margin-top:8px}
+.status.ok{color:var(--green);animation:statusIn .3s}
+.receive{display:none}.receive.show{display:grid;animation:panelIn .45s ease}
+.send.hide{display:none}
+.success-card{min-height:380px;display:grid;place-items:center;text-align:center}
+.check{width:72px;height:72px;border:1px solid rgba(52,211,153,.4);border-radius:50%;display:grid;place-items:center;color:#34d399;font-size:36px;margin:auto;box-shadow:0 0 35px rgba(52,211,153,.12);animation:checkIn .5s}
+.plain-output{margin-top:15px;background:#060a11;border:1px solid var(--line);border-radius:11px;padding:15px;text-align:left;min-height:80px;word-break:break-word;font-size:13px}
+.receive{grid-template-columns:1fr 1fr;gap:18px}
+.receive .panel{min-width:0}
+
+.toast{position:fixed;right:22px;bottom:22px;z-index:200;background:#101625;border:1px solid var(--line);border-radius:10px;padding:12px 15px;color:#dce4f2;font-size:11px;box-shadow:0 18px 45px #0009;transform:translateY(25px);opacity:0;pointer-events:none;transition:.3s}
+.toast.show{transform:none;opacity:1}
+
+@keyframes gradientMove{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+@keyframes ring{to{transform:rotate(360deg)}}
+@keyframes shieldPulse{50%{transform:scale(1.05);filter:drop-shadow(0 0 38px rgba(99,102,241,.7))}}
+@keyframes nodeFloat{50%{transform:translateY(-10px)}}
+@keyframes logoFloat{50%{transform:translateY(-3px) rotate(2deg)}}
+@keyframes blink{50%{opacity:.35;transform:scale(.7)}}
+@keyframes appIn{from{opacity:0;transform:scale(.97) translateY(15px)}to{opacity:1;transform:none}}
+@keyframes panelIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes statusIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@keyframes checkIn{from{opacity:0;transform:scale(.4) rotate(-20deg)}70%{transform:scale(1.1)}to{opacity:1;transform:none}}
+
+@media(max-width:900px){
+  .hero-wrap{grid-template-columns:1fr}.hero-visual{height:330px}.cards,.receive{grid-template-columns:1fr}.panel.full{grid-column:auto}.shell{grid-template-columns:1fr}.sidebar{position:static;display:flex;gap:5px;overflow:auto}.side-title,.side-security{display:none}.navbtn{white-space:nowrap}
+}
+@media(max-width:600px){
+  .topbar{padding:0 15px}.live{display:none}.app{padding:90px 15px 35px}.app-title{position:static;transform:none;text-align:left}.app-head{align-items:flex-start;gap:12px}.app-title h2{font-size:21px}.hero-wrap{gap:10px}.landing{padding:100px 22px 30px}h1{font-size:48px;letter-spacing:-3px}.hero-visual{height:280px}.energy{transform:scale(.78)}.hero-actions{flex-direction:column}
+}
+
+.output{
+  font-size:12px !important;
+  min-height:78px !important;
+  color:#d7deeb !important;
+  background:#070b13 !important;
+}
+textarea{
+  font-size:13px !important;
+  color:#f2f5fb !important;
+}
+label{font-weight:700;letter-spacing:.15px}
+.small{font-size:11px !important}
+.action{font-size:14px !important;letter-spacing:.1px}
+
+
+.live-logo{
+  position:relative;overflow:visible!important;
+  background:linear-gradient(145deg,#00C896,#00B4D8)!important;
+  box-shadow:0 0 24px rgba(59,130,246,.38),inset 0 0 12px rgba(255,255,255,.35)!important;
+}
+.logo-core{font-size:21px;color:#fff;position:relative;z-index:2;text-shadow:0 0 12px rgba(255,255,255,.8)}
+.logo-pulse{
+  position:absolute;right:-4px;top:-4px;width:11px;height:11px;border-radius:50%;
+  background:#60a5fa;border:2px solid #07111f;box-shadow:0 0 0 0 rgba(96,165,250,.8);
+  animation:livePulse 1.6s infinite;
+}
+.live-logo:after{
+  content:"";position:absolute;inset:-7px;border-radius:15px;border:1px solid rgba(0,200,150,.35);
+  animation:liveRing 2.4s infinite;pointer-events:none;
+}
+@keyframes livePulse{
+  0%{box-shadow:0 0 0 0 rgba(96,165,250,.75);opacity:1}
+  70%{box-shadow:0 0 0 8px rgba(96,165,250,0);opacity:.8}
+  100%{box-shadow:0 0 0 0 rgba(96,165,250,0);opacity:1}
+}
+@keyframes liveRing{
+  0%{transform:scale(.9);opacity:.8}
+  70%{transform:scale(1.12);opacity:0}
+  100%{transform:scale(.9);opacity:0}
+}
+
+
+/* Crypto Cipher branding */
+.crypto-logo{
+  position:relative!important;
+  overflow:visible!important;
+  display:grid!important;
+  place-items:center!important;
+  background:linear-gradient(145deg,#f1f5f9 0%,#93c5fd 42%,#2563eb 100%)!important;
+  border:1px solid rgba(255,255,255,.45)!important;
+  box-shadow:0 0 26px rgba(59,130,246,.45),inset 0 0 14px rgba(255,255,255,.45)!important;
+}
+.crypto-mark{
+  width:27px;height:27px;position:relative;display:grid;place-items:center;
+}
+.crypto-lock{
+  position:relative;z-index:3;font-size:23px;font-weight:900;color:#07111f;
+  line-height:1;text-shadow:0 1px 0 rgba(255,255,255,.65);
+}
+.crypto-mark i{
+  position:absolute;width:5px;height:5px;border-radius:50%;background:#fff;
+  box-shadow:0 0 8px rgba(255,255,255,.95);
+}
+.crypto-mark i:nth-child(2){left:-1px;top:5px}
+.crypto-mark i:nth-child(3){right:-1px;top:5px}
+.crypto-mark i:nth-child(4){left:50%;bottom:-2px;transform:translateX(-50%)}
+.crypto-logo .logo-pulse{
+  width:10px!important;height:10px!important;right:-5px!important;top:-5px!important;
+  background:#22c55e!important;border-color:#06101d!important;
+}
+.brand-title{
+  font-size:17px!important;
+  letter-spacing:-.2px!important;
+  font-weight:800!important;
+}
+.brand-title span{color:#60a5fa!important}
+.brand-sub{font-size:9px!important;letter-spacing:2.2px!important;color:#94a3b8!important}
+
+body,button,textarea,input{font-family:'Segoe UI',Arial,sans-serif!important}
+h1,h2,h3,.brand-title,.action,.primary,.secondary,.navbtn,.back{
+  font-family:'Segoe UI',Arial,sans-serif!important;
+}
+label,.output,.status,.badge,.num,.mini,.live,.side-title,.brand-sub{
+  font-family:'Segoe UI',Arial,sans-serif!important;
+}
+textarea,.output{
+  font-family:'Consolas','Courier New',monospace!important;
+}
+h1{font-weight:800!important}
+.app-title h2{font-weight:800!important}
+.panel-title h3{font-weight:750!important}
+label{font-size:12px!important;font-weight:600!important;color:#b7c2d4!important}
+.output{font-size:12px!important;line-height:1.65!important;color:#e2e8f0!important}
+.small,.back,.navbtn{font-size:12px!important}
+
+
+.image-logo{width:58px!important;height:58px;border-radius:20px!important;
+background:transparent!important;box-shadow:0 0 30px rgba(0,200,150,.35),0 0 50px rgba(0,180,216,.18)!important;
+overflow:visible!important;padding:0!important}
+.image-logo img{width:100%;height:100%;object-fit:contain;display:block;
+filter:drop-shadow(0 0 10px rgba(0,200,150,.35));animation:logoFloat 3s ease-in-out infinite}
+.brand-title{font-size:18px!important;font-weight:800!important;letter-spacing:.2px}
+.brand-title span{color:#67e8f9!important}
+
+
+/* ===== Universal Button Animation ===== */
+button,
+.navbtn,
+.action,
+.primary,
+.secondary,
+.back,
+.copy-btn,
+.clear-btn,
+.tab,
+.workspace-btn,
+button[type="button"],
+button[type="submit"]{
+  position:relative;
+  overflow:hidden;
+  transition:
+    transform .22s cubic-bezier(.2,.8,.2,1),
+    box-shadow .22s ease,
+    border-color .22s ease,
+    background .22s ease,
+    color .22s ease;
+  cursor:pointer;
+  isolation:isolate;
+}
+
+/* Moving shine */
+button::before,
+.navbtn::before,
+.action::before,
+.primary::before,
+.secondary::before,
+.back::before,
+.copy-btn::before,
+.clear-btn::before,
+.tab::before,
+.workspace-btn::before{
+  content:"";
+  position:absolute;
+  top:-80%;
+  left:-65%;
+  width:42%;
+  height:260%;
+  transform:rotate(24deg) translateX(-180%);
+  background:linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,.16),
+    rgba(255,255,255,.42),
+    rgba(255,255,255,.12),
+    transparent
+  );
+  transition:transform .65s ease;
+  pointer-events:none;
+  z-index:2;
+}
+
+/* Hover */
+button:hover,
+.navbtn:hover,
+.action:hover,
+.primary:hover,
+.secondary:hover,
+.back:hover,
+.copy-btn:hover,
+.clear-btn:hover,
+.tab:hover,
+.workspace-btn:hover{
+  transform:translateY(-2px) scale(1.012);
+  box-shadow:
+    0 8px 24px rgba(0,200,150,.18),
+    0 0 20px rgba(0,180,216,.12);
+}
+
+button:hover::before,
+.navbtn:hover::before,
+.action:hover::before,
+.primary:hover::before,
+.secondary:hover::before,
+.back:hover::before,
+.copy-btn:hover::before,
+.clear-btn:hover::before,
+.tab:hover::before,
+.workspace-btn:hover::before{
+  transform:rotate(24deg) translateX(520%);
+}
+
+/* Press */
+button:active,
+.navbtn:active,
+.action:active,
+.primary:active,
+.secondary:active,
+.back:active,
+.copy-btn:active,
+.clear-btn:active,
+.tab:active,
+.workspace-btn:active{
+  transform:translateY(1px) scale(.975);
+  box-shadow:0 3px 10px rgba(0,200,150,.15);
+}
+
+/* Keyboard focus */
+button:focus-visible,
+.navbtn:focus-visible,
+.action:focus-visible,
+.primary:focus-visible,
+.secondary:focus-visible,
+.back:focus-visible,
+.copy-btn:focus-visible,
+.clear-btn:focus-visible,
+.tab:focus-visible,
+.workspace-btn:focus-visible{
+  outline:2px solid #00B4D8;
+  outline-offset:3px;
+}
+
+/* Primary action buttons get a subtle breathing glow */
+.primary,
+.action{
+  animation:buttonBreath 2.8s ease-in-out infinite;
+}
+
+.primary:hover,
+.action:hover{
+  animation:none;
+}
+
+@keyframes buttonBreath{
+  0%,100%{
+    box-shadow:0 0 0 rgba(0,200,150,0);
+  }
+  50%{
+    box-shadow:0 0 18px rgba(0,200,150,.18);
+  }
+}
+
+/* Ripple effect when clicked */
+.button-ripple{
+  position:absolute;
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:rgba(255,255,255,.55);
+  transform:translate(-50%,-50%) scale(0);
+  animation:buttonRipple .55s ease-out forwards;
+  pointer-events:none;
+  z-index:5;
+}
+
+@keyframes buttonRipple{
+  to{
+    transform:translate(-50%,-50%) scale(18);
+    opacity:0;
+  }
+}
+
+/* Respect reduced-motion accessibility */
+@media (prefers-reduced-motion:reduce){
+  button,.navbtn,.action,.primary,.secondary,.back,.copy-btn,.clear-btn,.tab,.workspace-btn{
+    animation:none!important;
+    transition:none!important;
+  }
+}
+
+
+/* ===== Long-running premium button animation ===== */
+button,
+.navbtn,
+.action,
+.primary,
+.secondary,
+.back,
+.copy-btn,
+.clear-btn,
+.tab,
+.workspace-btn{
+  --mx:50%;
+  --my:50%;
+}
+
+/* Slow moving luminous border */
+button::after,
+.navbtn::after,
+.action::after,
+.primary::after,
+.secondary::after,
+.back::after,
+.copy-btn::after,
+.clear-btn::after,
+.tab::after,
+.workspace-btn::after{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  border-radius:inherit;
+  padding:1px;
+  background:conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(0,200,150,.05) 55deg,
+    rgba(0,180,216,.75) 105deg,
+    rgba(255,255,255,.75) 145deg,
+    rgba(0,200,150,.65) 190deg,
+    transparent 250deg,
+    transparent 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask-composite:exclude;
+  animation:longBorder 7s linear infinite;
+  pointer-events:none;
+  z-index:3;
+}
+
+@keyframes longBorder{
+  from{transform:rotate(0deg)}
+  to{transform:rotate(360deg)}
+}
+
+/* Slow floating glow */
+button,
+.navbtn,
+.action,
+.primary,
+.secondary,
+.back,
+.copy-btn,
+.clear-btn,
+.tab,
+.workspace-btn{
+  animation:
+    longFloat 4.8s ease-in-out infinite,
+    longGlow 6.5s ease-in-out infinite;
+}
+
+@keyframes longFloat{
+  0%,100%{transform:translateY(0)}
+  25%{transform:translateY(-1px)}
+  50%{transform:translateY(-2px)}
+  75%{transform:translateY(-1px)}
+}
+
+@keyframes longGlow{
+  0%,100%{
+    filter:brightness(1);
+    box-shadow:0 0 0 rgba(0,200,150,0);
+  }
+  35%{
+    filter:brightness(1.05);
+    box-shadow:0 0 14px rgba(0,200,150,.10);
+  }
+  70%{
+    filter:brightness(1.08);
+    box-shadow:0 0 22px rgba(0,180,216,.16);
+  }
+}
+
+/* Special slow shine continuously travels across buttons */
+button,
+.navbtn,
+.action,
+.primary,
+.secondary,
+.back,
+.copy-btn,
+.clear-btn,
+.tab,
+.workspace-btn{
+  background-size:220% 100%;
+  background-position:0% 50%;
+  transition:background-position .6s ease, transform .25s ease, filter .25s ease;
+}
+
+/* Hover becomes stronger */
+button:hover,
+.navbtn:hover,
+.action:hover,
+.primary:hover,
+.secondary:hover,
+.back:hover,
+.copy-btn:hover,
+.clear-btn:hover,
+.tab:hover,
+.workspace-btn:hover{
+  animation:
+    longFloat 2.2s ease-in-out infinite,
+    longGlow 2.4s ease-in-out infinite;
+  filter:brightness(1.13);
+}
+
+/* Keep click ripple above all decorative effects */
+.button-ripple{z-index:20!important}
+
+
+/* Slow ambient background movement */
+body:after{
+  content:"";
+  position:fixed;
+  inset:-25%;
+  pointer-events:none;
+  z-index:-1;
+  background:
+    radial-gradient(circle at 20% 30%,rgba(0,200,150,.10),transparent 22%),
+    radial-gradient(circle at 80% 70%,rgba(0,180,216,.10),transparent 24%);
+  animation:ambientMove 18s ease-in-out infinite alternate;
+}
+@keyframes ambientMove{
+  0%{transform:translate3d(-2%, -1%, 0) scale(1)}
+  50%{transform:translate3d(2%, 2%, 0) scale(1.06)}
+  100%{transform:translate3d(-1%, 3%, 0) scale(1.02)}
+}
+
+
+/* ===== CryptoCipher Premium Button Animation ===== */
+button,
+.navbtn,
+.action,
+.primary,
+.secondary,
+.back,
+.copy-btn,
+.clear-btn,
+.tab,
+.workspace-btn{
+  position:relative;
+  overflow:hidden;
+  isolation:isolate;
+  transform:translateZ(0);
+  transition:
+    transform .35s cubic-bezier(.2,.8,.2,1),
+    box-shadow .35s ease,
+    filter .35s ease;
+}
+
+/* Elegant moving glass highlight */
+button::before,
+.navbtn::before,
+.action::before,
+.primary::before,
+.secondary::before,
+.back::before,
+.copy-btn::before,
+.clear-btn::before,
+.tab::before,
+.workspace-btn::before{
+  content:"";
+  position:absolute;
+  top:-120%;
+  left:-45%;
+  width:28%;
+  height:340%;
+  transform:rotate(28deg);
+  background:linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,.04),
+    rgba(255,255,255,.55),
+    rgba(255,255,255,.10),
+    transparent
+  );
+  filter:blur(1px);
+  animation:premiumSweep 5.5s cubic-bezier(.45,0,.55,1) infinite;
+  pointer-events:none;
+  z-index:4;
+}
+
+/* Thin animated cyan/emerald aura */
+button::after,
+.navbtn::after,
+.action::after,
+.primary::after,
+.secondary::after,
+.back::after,
+.copy-btn::after,
+.clear-btn::after,
+.tab::after,
+.workspace-btn::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  pointer-events:none;
+  z-index:3;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.10),
+    inset 0 0 18px rgba(0,200,150,.04);
+  animation:premiumAura 3.8s ease-in-out infinite;
+}
+
+/* Gentle breathing — not distracting */
+.primary,
+.action{
+  animation:premiumBreath 3.2s ease-in-out infinite;
+}
+
+@keyframes premiumSweep{
+  0%,18%{transform:translateX(-120%) rotate(28deg);opacity:0}
+  28%{opacity:.9}
+  52%{transform:translateX(500%) rotate(28deg);opacity:.55}
+  65%,100%{transform:translateX(500%) rotate(28deg);opacity:0}
+}
+
+@keyframes premiumAura{
+  0%,100%{box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),inset 0 0 12px rgba(0,200,150,.03)}
+  50%{box-shadow:inset 0 0 0 1px rgba(103,232,249,.34),inset 0 0 22px rgba(0,180,216,.10)}
+}
+
+@keyframes premiumBreath{
+  0%,100%{transform:translateY(0) scale(1);filter:brightness(1)}
+  50%{transform:translateY(-1px) scale(1.008);filter:brightness(1.055)}
+}
+
+/* Premium hover interaction */
+button:hover,
+.navbtn:hover,
+.action:hover,
+.primary:hover,
+.secondary:hover,
+.back:hover,
+.copy-btn:hover,
+.clear-btn:hover,
+.tab:hover,
+.workspace-btn:hover{
+  transform:translateY(-3px) scale(1.018);
+  filter:brightness(1.12);
+  box-shadow:
+    0 12px 30px rgba(0,0,0,.25),
+    0 0 26px rgba(0,200,150,.14),
+    0 0 42px rgba(0,180,216,.08);
+}
+
+button:active,
+.navbtn:active,
+.action:active,
+.primary:active,
+.secondary:active,
+.back:active,
+.copy-btn:active,
+.clear-btn:active,
+.tab:active,
+.workspace-btn:active{
+  transform:translateY(1px) scale(.965);
+  filter:brightness(.98);
+  transition-duration:.08s;
+}
+
+/* A tiny success-style pulse for completed action states */
+button.success-pulse{
+  animation:successPulse 1.1s ease-out!important;
+}
+
+@keyframes successPulse{
+  0%{box-shadow:0 0 0 0 rgba(0,200,150,.55)}
+  45%{box-shadow:0 0 0 12px rgba(0,200,150,.10),0 0 32px rgba(0,200,150,.30)}
+  100%{box-shadow:0 0 0 25px rgba(0,200,150,0),0 0 0 rgba(0,200,150,0)}
+}
+
+@media (prefers-reduced-motion:reduce){
+  button,.navbtn,.action,.primary,.secondary,.back,.copy-btn,.clear-btn,.tab,.workspace-btn{
+    animation:none!important;
+    transition:none!important;
+  }
+}
+
+
+/* ===== New CryptoCipher hero visual ===== */
+.crypto-visual{
+  height:450px;
+  position:relative;
+  display:grid;
+  place-items:center;
+  isolation:isolate;
+}
+.crypto-visual::before{
+  content:"";
+  position:absolute;
+  width:260px;height:260px;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,200,150,.20),rgba(0,180,216,.10) 38%,transparent 70%);
+  filter:blur(8px);
+  animation:coreBreath 4s ease-in-out infinite;
+}
+.orbit{
+  position:absolute;
+  border-radius:50%;
+  border:1px solid rgba(0,180,216,.25);
+  left:50%;top:50%;
+  transform:translate(-50%,-50%);
+}
+.orbit-a{width:250px;height:250px;animation:orbitPulse 5s ease-in-out infinite}
+.orbit-b{width:350px;height:350px;border-color:rgba(0,200,150,.18);animation:orbitPulse 7s ease-in-out infinite reverse}
+.orbit-c{width:430px;height:430px;border-color:rgba(103,232,249,.12);animation:orbitSpin 18s linear infinite}
+.crypto-core{
+  width:205px;height:205px;
+  display:grid;place-items:center;
+  position:relative;z-index:4;
+  border-radius:42px;
+  background:linear-gradient(145deg,rgba(4,20,32,.96),rgba(3,45,52,.88));
+  border:1px solid rgba(103,232,249,.28);
+  box-shadow:0 0 45px rgba(0,200,150,.22),inset 0 0 35px rgba(0,180,216,.08);
+  animation:coreFloat 4.5s ease-in-out infinite;
+}
+.core-svg{
+  width:175px;height:175px;
+  filter:drop-shadow(0 0 16px rgba(0,200,150,.28));
+}
+.crypto-chip{
+  position:absolute;
+  z-index:6;
+  min-width:72px;
+  padding:11px 14px;
+  border-radius:16px;
+  background:rgba(7,15,27,.92);
+  border:1px solid rgba(103,232,249,.20);
+  box-shadow:0 14px 35px rgba(0,0,0,.35);
+  backdrop-filter:blur(8px);
+  display:flex;align-items:center;gap:8px;
+  animation:chipFloat 4s ease-in-out infinite;
+}
+.crypto-chip span{
+  font:9px 'Segoe UI',Arial,sans-serif;
+  color:#6ee7f8;
+  opacity:.8;
+}
+.crypto-chip b{
+  font:700 11px 'Segoe UI',Arial,sans-serif;
+  color:#e8fffb;
+  letter-spacing:.6px;
+}
+.chip-a{top:8%;right:13%}
+.chip-b{bottom:17%;right:4%;animation-delay:1.2s}
+.chip-c{bottom:8%;left:7%;animation-delay:2.1s}
+
+@keyframes coreBreath{
+  0%,100%{transform:scale(.92);opacity:.65}
+  50%{transform:scale(1.08);opacity:1}
+}
+@keyframes orbitPulse{
+  0%,100%{transform:translate(-50%,-50%) scale(.97);opacity:.55}
+  50%{transform:translate(-50%,-50%) scale(1.04);opacity:1}
+}
+@keyframes orbitSpin{
+  from{transform:translate(-50%,-50%) rotate(0)}
+  to{transform:translate(-50%,-50%) rotate(360deg)}
+}
+@keyframes coreFloat{
+  0%,100%{transform:translateY(0) rotate(0)}
+  50%{transform:translateY(-8px) rotate(.7deg)}
+}
+@keyframes chipFloat{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-9px)}
+}
+@media(max-width:900px){
+  .crypto-visual{height:350px}
+  .orbit-c{width:340px;height:340px}
+  .orbit-b{width:280px;height:280px}
+  .orbit-a{width:205px;height:205px}
+  .crypto-core{width:170px;height:170px}
+  .core-svg{width:145px;height:145px}
+}
+
+
+/* Send / Receive icon */
+.send-receive-icon{
+  width:21px!important;
+  height:21px!important;
+  object-fit:contain!important;
+  display:inline-block!important;
+  vertical-align:middle!important;
+  margin-right:7px!important;
+  filter:drop-shadow(0 0 6px rgba(0,200,150,.28));
+  transition:transform .35s ease,filter .35s ease;
+}
+.send-icon{
+  transform:rotate(0deg);
+}
+.receive-icon{
+  transform:rotate(180deg);
+}
+.navbtn:hover .send-receive-icon,
+.workspace-btn:hover .send-receive-icon{
+  transform:scale(1.12) translateX(2px);
+  filter:drop-shadow(0 0 9px rgba(0,180,216,.55));
+}
+.navbtn:hover .receive-icon,
+.workspace-btn:hover .receive-icon{
+  transform:rotate(180deg) scale(1.12) translateX(2px);
+}
+
+</style>
+
+<style>
+footer{
+  text-align:center;
+  padding:22px 20px;
+  margin-top:20px;
+  color:#94a3b8;
+  font-size:13px;
+  border-top:1px solid rgba(255,255,255,.09);
+  background:rgba(5,6,11,.55);
+  letter-spacing:.2px;
+}
+.developer-name{
+  display:inline-block;
+  color:#67e8f9;
+  font-weight:900;
+  padding:3px 8px;
+  border-radius:7px;
+  background:linear-gradient(90deg,rgba(0,200,150,.16),rgba(0,180,216,.16));
+  border:1px solid rgba(103,232,249,.28);
+  box-shadow:0 0 16px rgba(0,180,216,.16);
+  text-shadow:0 0 10px rgba(103,232,249,.55);
+}
+</style>
+
+</head>
+
+<body>
+<header class="topbar">
+  <a class="brand" href="#top">
+    <div class="logo live-logo image-logo" aria-label="CryptoCipher logo"><img src="assets/embedded-image-1.png" alt="CryptoCipher"></div>
+    <div>
+      <div class="brand-title">CryptoCipher</div>
+      
+    </div>
+  </a>
+  <div class="live"><span class="dot"></span>Browser Encryption Active</div>
+</header>
+
+<main id="top">
+<section class="landing" id="landing">
+  <div class="hero-wrap">
+    <div>
+      <div class="eyebrow">✦ HYBRID ENCRYPTION • AES-256-GCM + RSA-OAEP</div>
+      <h1>Private data.<br><span class="gradient">Zero compromise.</span></h1>
+      <p class="hero-copy">
+        A secure messaging laboratory built for demonstrating modern hybrid encryption.
+        Encrypt the message with AES, protect the AES key with RSA, then transfer only the encrypted payload.
+      </p>
+      <div class="hero-actions">
+        <button class="primary" onclick="openApp()">Start Secure Messaging →</button>
+        <button class="secondary" onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">How It Works</button>
+      </div>
+    </div>
+    <div class="hero-visual crypto-visual">
+      <div class="orbit orbit-a"></div>
+      <div class="orbit orbit-b"></div>
+      <div class="orbit orbit-c"></div>
+
+      <div class="crypto-core">
+        <svg class="core-svg" viewBox="0 0 240 240" aria-label="Encryption security graphic">
+          <defs>
+            <linearGradient id="cg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#00C896"/>
+              <stop offset="100%" stop-color="#00B4D8"/>
+            </linearGradient>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="5" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+
+          <!-- shield -->
+          <path d="M120 28 L190 55 L180 132 Q168 184 120 211 Q72 184 60 132 L50 55 Z"
+                fill="url(#cg)" opacity=".96" filter="url(#glow)"/>
+          <path d="M120 42 L174 63 L166 129 Q156 169 120 191 Q84 169 74 129 L66 63 Z"
+                fill="#071a2a" stroke="#9ffbea" stroke-width="2"/>
+
+          <!-- lock -->
+          <rect x="88" y="103" width="64" height="55" rx="10"
+                fill="#0a1623" stroke="#d9fff8" stroke-width="3"/>
+          <path d="M101 104 V87 Q101 61 120 61 Q139 61 139 87 V104"
+                fill="none" stroke="#d9fff8" stroke-width="10" stroke-linecap="round"/>
+          <circle cx="120" cy="129" r="7" fill="#00C896"/>
+          <path d="M120 136 V148" stroke="#00C896" stroke-width="5" stroke-linecap="round"/>
+
+          <!-- circuit traces -->
+          <g stroke="#00B4D8" stroke-width="2" fill="none" opacity=".9">
+            <path d="M55 91 H29 V68"/>
+            <path d="M185 91 H211 V68"/>
+            <path d="M58 151 H30 V176"/>
+            <path d="M182 151 H210 V176"/>
+          </g>
+          <g fill="#8fffe4">
+            <circle cx="29" cy="68" r="4"/>
+            <circle cx="211" cy="68" r="4"/>
+            <circle cx="30" cy="176" r="4"/>
+            <circle cx="210" cy="176" r="4"/>
+          </g>
+        </svg>
+      </div>
+
+      <div class="crypto-chip chip-a"><span>01</span><b>AES</b></div>
+      <div class="crypto-chip chip-b"><span>02</span><b>RSA</b></div>
+      <div class="crypto-chip chip-c"><span>03</span><b>SECURE</b></div>
+    </div>
+  </div>
+</section>
+
+<section class="app" id="app">
+  <div class="app-head">
+    <button class="back" onclick="closeApp()">← Back</button>
+    <div class="app-title"><div class="mini">LIVE SECURE WORKSPACE</div><h2>CryptoCipher</h2></div>
+    <div class="key-state"><span class="dot"></span> LIVE • RSA Session Ready</div>
+  </div>
+
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="side-title">WORKSPACE</div>
+      <button class="navbtn active" id="navSend" onclick="showMode('send')"><img class="send-receive-icon send-icon" src="assets/embedded-image-2.png" alt=""> Send Message</button>
+      <button class="navbtn" id="navReceive" onclick="showMode('receive')"><img class="send-receive-icon receive-icon" src="assets/embedded-image-3.png" alt=""> Receive Message</button>
+      <div class="side-security"><b>● Live Browser Secure</b>Keys stay inside this browser session. No server is used.</div>
+    </aside>
+
+    <div>
+      <div class="workspace-panel active send" id="sendView">
+        <div class="cards">
+          <section class="panel">
+            <div class="panel-title"><h3><span class="num">01</span>Compose Message</h3><span class="badge">AES-256-GCM</span></div>
+            <label for="message">Your private message</label>
+            <textarea id="message" maxlength="5000" placeholder="Type your message here..."></textarea>
+            <div class="char"><span id="count">0</span>/5000</div>
+            <label>Recipient</label>
+            <div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:11px;background:#080d15">
+              <div style="width:38px;height:38px;border-radius:11px;background:#111b38;color:#93c5fd;display:grid;place-items:center;font-weight:900">R</div>
+              <div><b style="font-size:12px">Secure Recipient</b><div style="font-size:9px;color:#69768d">RSA public key • session protected</div></div>
+            </div>
+            <button class="action" id="encryptBtn" style="margin-top:17px">🔐 Encrypt Message</button>
+            <div class="status" id="encryptStatus"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-title"><h3><span class="num">02</span>Encrypted Payload</h3><span class="badge">READY</span></div>
+            <label>Encrypted Message</label>
+            <div class="output" id="encryptedMessage">Your encrypted message will appear here...</div>
+            <div class="row"><button class="small" onclick="copyOutput('encryptedMessage')">Copy</button><button class="small clear" onclick="clearEncrypted()">Clear</button></div>
+            <label>RSA Encrypted AES Key</label>
+            <div class="output" id="encryptedKey">Your RSA encrypted AES key will appear here...</div>
+            <div class="row"><button class="small" onclick="copyOutput('encryptedKey')">Copy</button><button class="small clear" onclick="clearKey()">Clear</button></div>
+            <label>Initialization Vector</label>
+            <div class="output" id="ivOutput">Your IV will appear here...</div>
+            <div class="row"><button class="small" onclick="copyOutput('ivOutput')">Copy</button><button class="small clear" onclick="clearIV()">Clear</button></div>
+            <button class="small" style="width:100%;margin-top:12px;color:#dbeafe;border-color:rgba(0,180,216,.3)" onclick="loadIntoReceiver()">↘ Send Payload to Receiver</button>
+          </section>
+        </div>
+      </div>
+
+      <div class="workspace-panel receive" id="receiveView">
+        <section class="panel">
+          <div class="panel-title"><h3><span class="num">01</span>Encrypted Input</h3><span class="badge">RSA → AES</span></div>
+          <label for="receiveMessage">AES Encrypted Message</label>
+          <textarea id="receiveMessage" placeholder="Paste the encrypted message here..."></textarea>
+          <div class="row"><button class="small clear" onclick="clearReceiveMessage()">Clear</button></div>
+          <label for="receiveKey">RSA Encrypted AES Key</label>
+          <textarea id="receiveKey" class="input-short" placeholder="Paste the RSA encrypted AES key here..."></textarea>
+          <div class="row"><button class="small clear" onclick="clearReceiveKey()">Clear</button></div>
+          <label for="receiveIV">Initialization Vector</label>
+          <textarea id="receiveIV" class="input-short" placeholder="Paste the IV here..."></textarea>
+          <div class="row"><button class="small clear" onclick="clearReceiveIV()">Clear</button></div>
+          <button class="action" id="decryptBtn" style="margin-top:17px">🔓 Decrypt Message</button>
+          <div class="status" id="decryptStatus"></div>
+        </section>
+        <section class="panel success-card">
+          <div style="width:100%">
+            <span class="badge">SECURE RESULT</span>
+            <div class="check">✓</div>
+            <h3>Decrypted Message</h3>
+            <p id="decryptResultLabel" style="font-size:12px;color:#8995a9">Waiting for secure decryption...</p>
+            <div class="plain-output" id="decryptedOutput">No decrypted message yet.</div>
+            <div class="row"><button class="small" onclick="copyOutput('decryptedOutput')">Copy Message</button><button class="small clear" onclick="clearDecrypted()">Clear</button></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how" style="padding:80px 7vw 110px;max-width:1200px;margin:auto">
+  <div style="text-align:center">
+    <div class="eyebrow">HOW IT WORKS</div>
+    <h2 style="font-size:40px;letter-spacing:-2px;margin:18px 0 8px">AES handles the message.<br><span class="gradient">RSA protects the key.</span></h2>
+    <p style="color:#7d899f;max-width:650px;margin:0 auto;line-height:1.8">The app creates a fresh AES key, encrypts the message locally, encrypts that AES key with RSA-OAEP, and lets the recipient reverse the process.</p>
+  </div>
+</section>
+</main>
+
+<footer>© 2026, developed by <span class="developer-name">Kenil Patel</span></footer>
+<div class="toast" id="toast"></div>
+
+<script>
+let rsaKeys=null;
+
+const $=id=>document.getElementById(id);
+const enc=new TextEncoder();
+const dec=new TextDecoder();
+
+function b64(buf){
+  const bytes=new Uint8Array(buf);let s="";
+  for(let i=0;i<bytes.length;i++)s+=String.fromCharCode(bytes[i]);
+  return btoa(s);
+}
+function fromB64(s){
+  const bin=atob(s);const out=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)out[i]=bin.charCodeAt(i);
+  return out.buffer;
+}
+function toast(msg){
+  const t=$("toast");t.textContent=msg;t.classList.add("show");
+  clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.classList.remove("show"),1800);
+}
+async function generateKeys(){
+  rsaKeys=await crypto.subtle.generateKey({
+    name:"RSA-OAEP",modulusLength:2048,
+    publicExponent:new Uint8Array([1,0,1]),hash:"SHA-256"
+  },true,["encrypt","decrypt"]);
+}
+async function encryptFlow(){
+  const text=$("message").value;
+  if(!text.trim()){toast("Please enter a message first.");return}
+  if(!rsaKeys){toast("Security initialization is still running.");return}
+
+  const btn=$("encryptBtn");btn.disabled=true;btn.classList.add("loading");btn.textContent="Encrypting...";
+  await new Promise(r=>setTimeout(r,450));
+
+  try{
+    const aes=await crypto.subtle.generateKey({name:"AES-GCM",length:256},true,["encrypt","decrypt"]);
+    const iv=crypto.getRandomValues(new Uint8Array(12));
+    const cipher=await crypto.subtle.encrypt({name:"AES-GCM",iv},aes,enc.encode(text));
+    const raw=await crypto.subtle.exportKey("raw",aes);
+    const wrapped=await crypto.subtle.encrypt({name:"RSA-OAEP"},rsaKeys.publicKey,raw);
+
+    const encryptedMessageB64=b64(cipher);
+    const encryptedKeyB64=b64(wrapped);
+    const ivB64=b64(iv);
+
+    $("encryptedMessage").textContent=encryptedMessageB64;
+    $("encryptedKey").textContent=encryptedKeyB64;
+    $("ivOutput").textContent=ivB64;
+
+    // Automatically place every generated value into the Receiver/Decrypt section.
+    $("receiveMessage").value=encryptedMessageB64;
+    $("receiveKey").value=encryptedKeyB64;
+    $("receiveIV").value=ivB64;
+    clearDecrypted();
+    resetDecrypt();
+
+    $("encryptStatus").textContent="✓ Message encrypted • Payload copied to Receiver";
+    $("encryptStatus").classList.add("ok");
+    btn.classList.remove("loading");btn.classList.add("success");btn.textContent="✓ ENCRYPTION COMPLETE";
+    toast("Message encrypted.");
+  }catch(e){
+    console.error(e);toast("Encryption failed.");
+    resetEncrypt();
+  }finally{btn.disabled=false}
+}
+async function decryptFlow(){
+  const c=$("receiveMessage").value.trim(), k=$("receiveKey").value.trim(), ivs=$("receiveIV").value.trim();
+  if(!c||!k||!ivs){toast("Paste encrypted message, RSA key and IV.");return}
+  const btn=$("decryptBtn");btn.disabled=true;btn.classList.add("loading");btn.textContent="Decrypting...";
+  await new Promise(r=>setTimeout(r,450));
+  try{
+    const raw=await crypto.subtle.decrypt({name:"RSA-OAEP"},rsaKeys.privateKey,fromB64(k));
+    const aes=await crypto.subtle.importKey("raw",raw,{name:"AES-GCM"},false,["decrypt"]);
+    const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv:new Uint8Array(fromB64(ivs))},aes,fromB64(c));
+    $("decryptedOutput").textContent=dec.decode(plain);
+    $("decryptResultLabel").textContent="MESSAGE SUCCESSFULLY DECRYPTED";
+    $("decryptStatus").textContent="✓ Message decrypted successfully";
+    $("decryptStatus").classList.add("ok");
+    btn.classList.remove("loading");btn.classList.add("success");btn.textContent="✓ DECRYPTION COMPLETE";
+    toast("Message decrypted.");
+  }catch(e){
+    console.error(e);toast("Decryption failed. Check the pasted values.");
+    resetDecrypt();
+  }finally{btn.disabled=false}
+}
+function resetEncrypt(){
+  const b=$("encryptBtn");b.classList.remove("success","loading");b.textContent="🔐 Encrypt Message →";
+}
+function resetDecrypt(){
+  const b=$("decryptBtn");b.classList.remove("success","loading");b.textContent="🔓 Decrypt Message →";
+}
+function clearEncrypted(){
+  $("encryptedMessage").textContent="Encrypted message will appear here...";
+  resetEncrypt();$("encryptStatus").textContent="";$("encryptStatus").classList.remove("ok");
+}
+function clearKey(){
+  $("encryptedKey").textContent="RSA encrypted AES key will appear here...";
+  if($("encryptedMessage").textContent.startsWith("Encrypted message will"))resetEncrypt();
+}
+function clearIV(){
+  $("ivOutput").textContent="IV will appear here...";
+}
+function clearReceiveMessage(){
+  $("receiveMessage").value="";checkDecryptReset();
+}
+function clearReceiveKey(){
+  $("receiveKey").value="";checkDecryptReset();
+}
+function clearReceiveIV(){
+  $("receiveIV").value="";checkDecryptReset();
+}
+function clearDecrypted(){
+  $("decryptedOutput").textContent="No decrypted message yet.";
+  $("decryptResultLabel").textContent="Your decrypted message will appear here.";
+  $("decryptStatus").textContent="";$("decryptStatus").classList.remove("ok");
+  checkDecryptReset();
+}
+function checkDecryptReset(){
+  if(!$("receiveMessage").value.trim()&&!$("receiveKey").value.trim()&&!$("receiveIV").value.trim()&&$("decryptedOutput").textContent==="No decrypted message yet.")
+    resetDecrypt();
+}
+async function copyOutput(id){
+  const el=$(id);const value=el.value!==undefined?el.value:el.textContent;
+  if(!value||value.includes("will appear here")||value==="No decrypted message yet."){toast("Nothing to copy.");return}
+  try{await navigator.clipboard.writeText(value);toast("Copied to clipboard.");}
+  catch{toast("Copy failed. Please copy manually.");}
+}
+function loadIntoReceiver(){
+  if($("encryptedMessage").textContent.startsWith("Encrypted message will")){toast("Encrypt a message first.");return}
+  $("receiveMessage").value=$("encryptedMessage").textContent;
+  $("receiveKey").value=$("encryptedKey").textContent;
+  $("receiveIV").value=$("ivOutput").textContent;
+  showMode("receive");toast("Payload loaded into receiver.");
+}
+function showMode(mode){
+  const send=mode==="send";
+  $("sendView").classList.toggle("active",send);
+  $("sendView").classList.toggle("hide",!send);
+  $("receiveView").classList.toggle("show",!send);
+  $("navSend").classList.toggle("active",send);
+  $("navReceive").classList.toggle("active",!send);
+  if(!send){ window.scrollTo({top:0,behavior:"smooth"}); if($("receiveMessage").value && $("receiveKey").value && $("receiveIV").value) toast("Encrypted payload is ready in Decryption."); }
+}
+function openApp(){
+  $("landing").classList.add("hidden");
+  $("app").classList.add("active");
+  window.scrollTo({top:0,behavior:"smooth"});
+  toast("Secure workspace opened.");
+}
+function closeApp(){
+  $("app").classList.remove("active");
+  $("landing").classList.remove("hidden");
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+$("message").addEventListener("input",()=>{$("count").textContent=$("message").value.length});
+$("encryptBtn").addEventListener("click",encryptFlow);
+$("decryptBtn").addEventListener("click",decryptFlow);
+
+generateKeys().then(()=>toast("Browser RSA keys ready.")).catch(()=>toast("Web Crypto is unavailable."));
+</script>
+
+<script>
+document.addEventListener("click", function(e) {
+  const btn = e.target.closest("button, .navbtn, .action, .primary, .secondary, .back, .copy-btn, .clear-btn, .tab, .workspace-btn");
+  if (!btn || btn.disabled) return;
+
+  const rect = btn.getBoundingClientRect();
+  const ripple = document.createElement("span");
+  ripple.className = "button-ripple";
+  ripple.style.left = (e.clientX - rect.left) + "px";
+  ripple.style.top = (e.clientY - rect.top) + "px";
+
+  btn.appendChild(ripple);
+  ripple.addEventListener("animationend", () => ripple.remove());
+});
+</script>
+
+
+<script>
+(function(){
+  function watchButton(btn){
+    if(!btn) return;
+    const observer = new MutationObserver(function(){
+      btn.classList.remove("success-pulse");
+      void btn.offsetWidth;
+      btn.classList.add("success-pulse");
+      setTimeout(function(){ btn.classList.remove("success-pulse"); }, 1200);
+    });
+    observer.observe(btn,{childList:true,subtree:true,characterData:true});
+  }
+
+  document.querySelectorAll("button").forEach(watchButton);
+})();
+</script>
+
+
+<style>
+/* Transparent CryptoCipher send/receive icons */
+.send-receive-icon{
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  mix-blend-mode:normal!important;
+  filter:drop-shadow(0 0 5px rgba(0,200,150,.28))!important;
+}
+.send-icon{
+  filter:drop-shadow(0 0 6px rgba(0,200,150,.38))!important;
+}
+.receive-icon{
+  filter:drop-shadow(0 0 6px rgba(0,180,216,.38))!important;
+}
+</style>
+
+</body>
+</html>
+
+<style>
+/* Clean How It Works control: no box/outline */
+.hero-actions .secondary{
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  padding-left:8px!important;
+  padding-right:8px!important;
+}
+.hero-actions .secondary::after{
+  box-shadow:none!important;
+  border:0!important;
+}
+.hero-actions .secondary:hover{
+  background:rgba(255,255,255,.04)!important;
+  box-shadow:0 0 20px rgba(0,180,216,.08)!important;
+}
+</style>
